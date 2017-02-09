@@ -1,0 +1,55 @@
+require(RMySQL)
+
+## Define function to allocate week number
+allocateWeek = function(df,str,end,DateCol){
+  weekNb = seq(as.Date(str, "%m/%d/%y"), as.Date(end, "%m/%d/%y"), "week")
+  df[,DateCol] = as.character.factor(df[,DateCol])
+  df[,DateCol] = as.Date(df[,DateCol],"%Y/%m/%d")
+  
+  i = 0
+  df[,weekStart] = Sys.Date()
+  while (TRUE) {
+    i= i+1
+    idx = (df[,DateCol] >= weekNb[i] & df[,DateCol] < weekNb[i+1])
+    df[idx,weekStart] =  weekNb[i]
+    if(i == (length(weekNb)-1)){
+      break
+    }
+  }
+}
+
+host_db = 'media-pbplus-me.cj68c06i5nax.ap-northeast-1.rds.amazonaws.com'
+
+conn <- dbConnect(MySQL(), user = 'debut',dbname = 'event', password = 'tp6m4xup6',
+                  host = host_db) 
+
+event_users = dbGetQuery(conn, "SELECT * FROM account_pbuser")
+
+
+dbGetQuery(conn,'SET NAMES utf8')
+payment_order = dbGetQuery(conn, "SELECT * FROM payment_order")
+payment_order = allocateWeek(payment_order,'11/30/15','04/25/16','created_date','%Y-%m-%d')
+event_sum = aggregate(payment_order$amount, by=list(Category=payment_order$weekStart), FUN=sum)
+event_registors = aggregate(payment_order$id, by=list(Category=payment_order$weekStart), FUN=length)
+
+meal_event = dbGetQuery(conn, "SELECT * FROM meal_event")
+meal_event = meal_event[c(-1,-2),]
+meal_event = allocateWeek(meal_event,'11/30/15','04/25/16','signup_start_date','%Y-%m-%d')
+meal_event_counts = aggregate(meal_event$id, by=list(Category=meal_event$weekStart), FUN=length)
+
+account_pbuser  = dbGetQuery(conn, "SELECT * FROM account_pbuser")
+account_pbuser = account_pbuser[c(-1,-2),]
+
+host_systexdb = 'Systexdb.cj68c06i5nax.ap-northeast-1.rds.amazonaws.com'
+conn1 <- dbConnect(MySQL(), user = 'pbplus',dbname = 'pbplus', password = 'pbplus',
+                   host = host_systexdb) 
+sap_users = dbGetQuery(conn1, "SELECT * FROM users")
+
+account_pbuser = merge(account_pbuser,sap_users[,c('p_mobilenumber','createdTS')],by.x = 'phone_number',by.y = 'p_mobilenumber',all.x = T)
+account_pbuser = allocateWeek(account_pbuser,'05/11/15','04/25/16','createdTS','%Y-%m-%d')
+account_pbuser_count = aggregate(account_pbuser$id, by=list(Category=account_pbuser$weekStart), FUN=length)
+
+print(event_sum)
+print(event_registors)
+print(account_pbuser_count)
+

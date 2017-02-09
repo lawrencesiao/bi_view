@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+<meta charset="utf-8">
+<style> /* set the CSS */
+
+body {
+  font: 10px sans-serif;
+}
+
+.axis path,
+.axis line {
+  fill: none;
+  stroke: #000;
+  shape-rendering: crispEdges;
+}
+
+.area {
+  fill: steelblue;
+}
+
+</style>
+<body>
+
+<!-- load the d3.js library -->    
+<!-- <script src="http://d3js.org/d3.v3.min.js"></script> -->
+<script src="d3.min.js"></script>
+
+<script>
+var margin = {top: 20, right: 20, bottom: 30, left: 50},
+    width = 960 - margin.left - margin.right,
+    height = 500 - margin.top - margin.bottom;
+
+var parseDate = d3.time.format("%d-%b-%y").parse;
+
+var x = d3.time.scale()
+    .range([0, width]);
+
+var y = d3.scale.linear()
+    .range([height, 0]);
+
+var xAxis = d3.svg.axis()
+    .scale(x)
+    .orient("bottom");
+
+var yAxis = d3.svg.axis()
+    .scale(y)
+    .orient("left");
+
+var area = d3.svg.area()
+    .x(function(d) { return x(d.date); })
+    .y0(height)
+    .y1(function(d) { return y(d.close); });
+
+var svg = d3.select("body").append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+  .append("g")
+    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+d3.tsv("https://gist.githubusercontent.com/cyrilcherian/6baf8967e3fceaa4fec1/raw/02ab25f4b7956b86be41523932da434529377fdb/data.tsv", function(error, data) {
+  if (error) throw error;
+
+  data.forEach(function(d) {
+    d.date = parseDate(d.date);
+    d.close = +d.close;
+  });
+
+  x.domain(d3.extent(data, function(d) { return d.date; }));
+  y.domain([0, d3.max(data, function(d) { return d.close; })]);
+
+  var bucket = [];
+  var prev = undefined;
+  var datanew = [];
+  data.forEach(function(d){
+     if (d.close > 150){
+       if (prev && prev.close < 150){
+         datanew.push(bucket);
+         bucket = [];
+       }
+       bucket.push(d);
+     } else {
+       if (prev && prev.close > 150){
+         datanew.push(bucket);
+         bucket = [];
+       }
+       bucket.push(d);
+     }
+     prev = d;
+  });
+  datanew.push(bucket); //datanew will hold the chunk of data with close > 150.
+  console.log(datanew);
+  datanew.forEach(function(d){//iterate through the chunks
+        console.log(d)
+        console.log(d.length);
+
+        if (d[0].close>150)
+          c = "red";//less than 150 so make it red as this chunk is for less than 150
+        else 
+          c="blue";//greater than 150 so make it blue as this chunk is for greater than 150
+        svg.append("path")
+          .datum(d)
+          .attr("class", "area")
+          .attr("stroke", c)//color selected above
+          .style("fill", c)
+          .attr("d", area);
+      });
+
+
+  svg.append("g")
+      .attr("class", "x axis")
+      .attr("transform", "translate(0," + height + ")")
+      .call(xAxis);
+
+  svg.append("g")
+      .attr("class", "y axis")
+      .call(yAxis)
+    .append("text")
+      .attr("transform", "rotate(-90)")
+      .attr("y", 6)
+      .attr("dy", ".71em")
+      .style("text-anchor", "end")
+      .text("Price ($)");
+});
+
+</script>
+</body>
+</html>

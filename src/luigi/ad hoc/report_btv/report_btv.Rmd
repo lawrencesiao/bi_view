@@ -1,0 +1,31 @@
+---
+title: "btv 收視人口分布"
+author: "Lawrence Siao"
+date: "July 26, 2016"
+output: html_document
+---
+
+以下為btv開播以來個地區收視次數分布
+顏色越深以及圓圈越大代表該地區收視次數越多
+```{r message=FALSE,echo=FALSE,warning=FALSE}
+library(ggmap)
+library(mapproj)
+test = read.csv('~/pbplus/report_btv/user_by_city.csv',header = T)
+colnames(test)[2] = 'log_sum'
+map <- get_map(location = 'Taiwan', zoom = 8)
+
+ggmap(map,darken = c(0.5, "white")) +
+  geom_point(aes(x = lng, y = lat,color=log_sum,size= log_sum), data = test)+
+  scale_colour_gradient(low='white',high='red',trans = "log") + scale_size(trans='log')+ggtitle('btv viewers geographic distribution')
+
+```
+
+
+以下為列表，由總收視人數排序， </br>
+註:(not set)為無法判斷地區
+```{r message=FALSE,echo=FALSE}
+library('knitr')
+test = read.csv('~/pbplus/report_btv/user_by_city.csv',header = T)
+kable(test, format = "markdown")
+```
+
